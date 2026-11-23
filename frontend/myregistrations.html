@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CampusConnect - My Registrations</title>
+<!-- Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="api-config.js"></script>
+<script type="module" src="auth.js"></script>
+<!-- Tailwind Custom Configuration -->
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#F5F3FF',
+              100: '#EDE9FE',
+              200: '#DDD6FE',
+              500: '#8B5CF6',
+              600: '#7C3AED',
+              700: '#6D28D9'
+            },
+            status: {
+              success: '#059669',
+              successBg: '#ECFDF5',
+              successBorder: '#A7F3D0'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="custom-styling">
+    /* Subtle custom transitions and font smoothing */
+    body {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+  </style>
+</head>
+<body class="bg-gray-50/60 text-slate-800 flex flex-col min-h-screen">
+<!-- BEGIN: MainHeader -->
+<header class="bg-white border-b border-gray-200 sticky top-0 z-40" data-purpose="site-navigation">
+<div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+<!-- Brand Logo -->
+<div class="flex items-center space-x-3 cursor-pointer">
+<div class="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center text-white shadow-sm shadow-brand-500/20">
+<svg class="w-6 h-6" fill="currentColor" viewbox="0 0 24 24">
+<path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+<span class="text-2xl font-bold tracking-tight text-gray-900">
+          Campus<span class="text-brand-600">Connect</span>
+</span>
+</div>
+<!-- Navigation Segmented Pill Toggle -->
+<nav aria-label="Main Navigation" class="flex items-center bg-gray-100/90 p-1.5 rounded-full border border-gray-200">
+<a class="px-6 py-2 rounded-full text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors" href="exploreevnts.html">
+          Explore
+        </a>
+<a class="px-6 py-2 rounded-full text-sm font-semibold text-brand-700 bg-white shadow-sm" href="myregistrations.html">
+          My Registration
+        </a>
+</nav>
+<!-- Student Profile Badge -->
+<div class="flex items-center space-x-3" data-purpose="user-badge">
+<div data-auth-controls class="flex items-center gap-1"></div>
+</div>
+</div>
+</header>
+<!-- END: MainHeader -->
+<!-- BEGIN: MainContent -->
+<main class="flex-grow max-w-5xl w-full mx-auto px-6 py-10 space-y-14">
+<section aria-labelledby="registrations-heading" data-purpose="registrations-frame">
+<div class="flex items-center justify-between mb-6">
+<h1 class="text-3xl font-extrabold text-gray-900 tracking-tight" id="registrations-heading">My Registered Events</h1>
+<span id="registration-count" class="hidden inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-brand-100 text-brand-700"></span>
+</div>
+<div id="registrations-content" class="space-y-4" aria-live="polite">
+<div class="bg-white border border-gray-200/90 rounded-2xl p-10 text-center shadow-sm">
+<div class="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-brand-100 border-t-brand-600"></div>
+<p class="text-sm font-medium text-gray-500">Loading registrations...</p>
+</div>
+</div>
+</section>
+</main>
+<!-- END: MainContent -->
+<!-- BEGIN: MainFooter -->
+<footer class="bg-white border-t border-gray-200 py-6 mt-auto" data-purpose="site-footer">
+<div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-500">
+<!-- Brand & Tagline -->
+<div class="flex items-center space-x-1.5">
+<span class="font-bold text-gray-900">CampusConnect</span>
+<span class="text-gray-400">•</span>
+<span>Your campus activity directory</span>
+</div>
+<!-- Footer Quick Links -->
+<nav aria-label="Footer Links" class="flex items-center space-x-6 font-medium text-gray-600">
+<a class="hover:text-brand-600 transition-colors" href="#">Campus Guidelines</a>
+<a class="hover:text-brand-600 transition-colors" href="#">Privacy Policy</a>
+<a class="hover:text-brand-600 transition-colors" href="#">Support &amp; Help</a>
+</nav>
+<!-- Copyright Notice -->
+<div>
+<span>© 2026 CampusConnect. All rights reserved.</span>
+</div>
+</div>
+</footer>
+<!-- END: MainFooter -->
+<script type="module">
+const content = document.getElementById("registrations-content");
+const countBadge = document.getElementById("registration-count");
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function showState(title, message, showExplore = false) {
+  content.innerHTML = `
+    <div class="bg-white border border-gray-200/90 rounded-2xl p-12 text-center shadow-sm flex flex-col items-center">
+      <div class="w-16 h-16 rounded-2xl bg-brand-50 border border-brand-100 flex items-center justify-center text-brand-600 mb-5">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.75" viewbox="0 0 24 24">
+          <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      </div>
+      <h2 class="text-xl font-bold text-gray-900">${escapeHtml(title)}</h2>
+      <p class="text-sm text-gray-500 max-w-md mt-2">${escapeHtml(message)}</p>
+      ${showExplore ? '<a href="exploreevnts.html" class="mt-7 inline-flex items-center justify-center px-7 py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-medium text-sm">Explore Campus Events</a>' : ""}
+    </div>
+  `;
+}
+
+async function loadRegistrations() {
+  if (!window.CampusConnectAuth) {
+    showState("Authentication unavailable", "Please refresh and try again.");
+    return;
+  }
+
+  if (window.CampusConnectAuth.configurationError) {
+    showState("Configuration required", window.CampusConnectAuth.configurationError);
+    return;
+  }
+
+  const user = await window.CampusConnectAuth.getUser();
+  if (!user) {
+    showState("Login required", "Sign in to view your registered events.", true);
+    window.setTimeout(() => { window.location.href = "login.html"; }, 1500);
+    return;
+  }
+
+  const token = await window.CampusConnectAuth.getAccessToken();
+  if (!token) {
+    showState("Session unavailable", "Please log in again.");
+    return;
+  }
+
+  try {
+    const response = await fetch(`${window.CampusConnectApiConfig.baseUrl}/me/registrations`, {
+      headers: {
+        "Accept": "application/json",
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (response.status === 401) {
+      showState("Session expired", "Please log in again.");
+      return;
+    }
+    if (!response.ok) {
+      throw new Error(`API request failed with status ${response.status}`);
+    }
+
+    const registrations = await response.json();
+    if (!Array.isArray(registrations)) {
+      throw new Error("Unexpected registrations response");
+    }
+
+    if (!registrations.length) {
+      countBadge.classList.add("hidden");
+      showState("No registrations yet", "Discover and sign up for upcoming campus events.", true);
+      return;
+    }
+
+    countBadge.textContent = `${registrations.length} Active`;
+    countBadge.classList.remove("hidden");
+    content.innerHTML = registrations.map((registration) => {
+      const event = registration.events || {};
+      const title = escapeHtml(event.title || "Untitled event");
+      const status = escapeHtml(event.status || "Status unavailable");
+      const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+      const isOpen = String(event.status).toLowerCase() === "open";
+      const createdAt = registration.created_at
+        ? new Date(registration.created_at).toLocaleDateString()
+        : "Date unavailable";
+
+      return `
+        <article class="bg-white border border-gray-200/90 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div class="space-y-1.5">
+              <h2 class="text-xl font-bold text-gray-900 tracking-tight">${title}</h2>
+              <div class="flex items-center space-x-2 text-sm text-gray-500 font-medium">
+                <span>Status: ${statusLabel}</span>
+                <span class="text-gray-300">&bull;</span>
+                <span>Registered ${escapeHtml(createdAt)}</span>
+              </div>
+            </div>
+            <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold ${isOpen ? "bg-emerald-50 text-emerald-700 border border-emerald-200/90" : "bg-slate-100 text-slate-700 border border-slate-200"}">
+              Registered
+            </span>
+          </div>
+        </article>
+      `;
+    }).join("");
+  } catch {
+    showState("Unable to load registrations", "Please confirm the backend is running and try again.");
+  }
+}
+
+loadRegistrations();
+</script>
+</body></html>

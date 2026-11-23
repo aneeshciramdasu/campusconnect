@@ -1,15 +1,38 @@
+import os
 from typing import Optional
 
-from fastapi import APIRouter, Header, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
-from app.supabase_client import supabase
+from app.auth import get_authenticated_user
+from app.supabase_client import create_user_scoped_supabase_client, supabase
 
 
 router = APIRouter(
     prefix="/api",
     tags=["CampusConnect API"]
 )
+
+
+def get_authenticated_user_ids(user_id: str) -> list[str]:
+    user_ids = {user_id}
+
+    try:
+        mapping_res = (
+            supabase.table("auth_user_mappings")
+            .select("legacy_user_id")
+            .eq("auth_user_id", user_id)
+            .execute()
+        )
+        for mapping in mapping_res.data or []:
+            legacy_id = mapping.get("legacy_user_id")
+            if legacy_id:
+                user_ids.add(str(legacy_id))
+    except Exception:
+        # A missing or not-yet-migrated mapping table must not grant extra access.
+        pass
+
+    return list(user_ids)
 
 
 class RegistrationRequest(BaseModel):
@@ -73,8 +96,7 @@ def get_event_details(event_id: str):
 
 # ============================================================
 # FR-04: Register student for an event
-# Note: This is the initial UNSAFE version.
-# Database-level locking is needed to prevent race conditions.
+# Registration remains disabled until the database migration is reviewed and tested.
 # ============================================================
 
 @router.post(
@@ -84,84 +106,70 @@ def get_event_details(event_id: str):
 )
 def register_for_event(
     payload: RegistrationRequest,
-    x_user_id: Optional[str] = Header(default=None)
+    authenticated_user=Depends(get_authenticated_user)
 ):
-
-    # Guard 1: Check user ID
-    if not x_user_id:
+    registration_enabled = os.getenv("REGISTRATION_ENABLED", "false").strip().lower()
+    if registration_enabled not in {"1", "true", "yes"}:
         raise HTTPException(
-            status_code=401,
-            detail="Not authenticated"
+            status_code=503,
+            detail="Registration is temporarily disabled",
         )
 
-    # Guard 2: Check whether event exists
-    event_res = (
-        supabase.table("events")
-        .select("*")
-        .eq("id", payload.event_id)
-        .execute()
-    )
-
-    if not event_res.data:
+    try:
+        user_supabase = create_user_scoped_supabase_client(
+            authenticated_user.access_token
+        )
+    except RuntimeError:
         raise HTTPException(
-            status_code=404,
-            detail="Event not found"
+            status_code=503,
+            detail="Registration service configuration is incomplete",
         )
 
-    event = event_res.data[0]
+    try:
+        response = user_supabase.rpc(
+            "register_for_event",
+            {"p_event_id": payload.event_id},
+        ).execute()
+    except Exception as error:
+        code = str(getattr(error, "code", "")).upper()
+        message = str(getattr(error, "message", error)).lower()
 
-    # Guard 3: Check event registration status
-    if event["status"] != "open":
+        if code == "23505" or "duplicate" in message:
+            raise HTTPException(status_code=409, detail="DUPLICATE_REGISTRATION")
+        if code in {"P0001", "EVENT_FULL"} or "event full" in message:
+            raise HTTPException(status_code=409, detail="EVENT_FULL")
+        if code == "P0002" or "not found" in message:
+            raise HTTPException(status_code=404, detail="Event not found")
+        if code == "22023" or "closed" in message:
+            raise HTTPException(status_code=400, detail="Event is closed for registration")
+        if code == "42501" or "auth" in message or "profile" in message:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
         raise HTTPException(
-            status_code=400,
-            detail="Event is closed for registration"
+            status_code=502,
+            detail="Registration service is unavailable",
         )
 
-    # Guard 4: Prevent duplicate registration
-    existing = (
-        supabase.table("registrations")
-        .select("id")
-        .eq("user_id", x_user_id)
-        .eq("event_id", payload.event_id)
-        .execute()
-    )
-
-    if existing.data:
+    if not response.data:
         raise HTTPException(
-            status_code=409,
-            detail="DUPLICATE_REGISTRATION"
+            status_code=502,
+            detail="Registration service returned no result",
         )
 
-    # Guard 5: Check available seats
-    count_res = (
-        supabase.table("registrations")
-        .select("id", count="exact")
-        .eq("event_id", payload.event_id)
-        .execute()
-    )
+    new_registration = response.data
+    if isinstance(new_registration, list):
+        new_registration = new_registration[0] if new_registration else None
 
-    if (count_res.count or 0) >= event["capacity"]:
+    if not new_registration:
         raise HTTPException(
-            status_code=409,
-            detail="EVENT_FULL"
+            status_code=502,
+            detail="Registration service returned no result",
         )
-
-    # Guard 6: Save registration
-    insert_res = (
-        supabase.table("registrations")
-        .insert({
-            "user_id": x_user_id,
-            "event_id": payload.event_id
-        })
-        .execute()
-    )
-
-    new_reg = insert_res.data[0]
 
     return {
-        "id": new_reg["id"],
+        "id": new_registration.get("id"),
         "event_id": payload.event_id,
-        "status": "REGISTERED"
+        "status": "REGISTERED",
     }
 
 
@@ -171,25 +179,21 @@ def register_for_event(
 
 @router.get("/me/registrations", summary="My registrations")
 def get_my_registrations(
-    x_user_id: Optional[str] = Header(default=None)
+    authenticated_user=Depends(get_authenticated_user)
 ):
+    user_ids = get_authenticated_user_ids(authenticated_user.id)
 
-    if not x_user_id:
-        raise HTTPException(
-            status_code=401,
-            detail="Not authenticated"
-        )
-
-    res = (
+    query = (
         supabase.table("registrations")
-        .select(
-            "id, created_at, events(id, title, capacity, status)"
-        )
-        .eq("user_id", x_user_id)
-        .execute()
+        .select("id, created_at, events(id, title, capacity, status)")
     )
 
-    return res.data
+    if len(user_ids) == 1:
+        query = query.eq("user_id", user_ids[0])
+    else:
+        query = query.in_("user_id", user_ids)
+
+    return query.execute().data
 
 
 # ============================================================
@@ -202,15 +206,9 @@ def get_my_registrations(
 )
 def get_event_attendees(
     event_id: str,
-    x_user_id: Optional[str] = Header(default=None)
+    authenticated_user=Depends(get_authenticated_user)
 ):
-
-    # Guard 1: Check user ID
-    if not x_user_id:
-        raise HTTPException(
-            status_code=401,
-            detail="Not authenticated"
-        )
+    user_ids = get_authenticated_user_ids(authenticated_user.id)
 
     # Guard 2: Check event ownership
     event_res = (
@@ -226,7 +224,8 @@ def get_event_attendees(
             detail="Event not found"
         )
 
-    if event_res.data[0]["organizer_id"] != x_user_id:
+    organizer_id = str(event_res.data[0]["organizer_id"])
+    if organizer_id not in user_ids:
         raise HTTPException(
             status_code=403,
             detail="Forbidden: you can only view attendees for events you own"

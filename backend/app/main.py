@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -9,12 +11,23 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Allow the React frontend (another port) to call this API
+def get_allowed_origins():
+    configured = os.getenv("CORS_ALLOWED_ORIGINS", "").strip()
+    if configured:
+        return [origin.strip() for origin in configured.split(",") if origin.strip()]
+
+    return [
+        "http://127.0.0.1:5500",
+        "http://localhost:5500",
+    ]
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=get_allowed_origins(),
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept"],
+    allow_credentials=True,
 )
 
 # Plug in all /api endpoints from routes.py

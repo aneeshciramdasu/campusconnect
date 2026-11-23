@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CampusConnect - Event Details</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        brand: {
+          50: '#f5f3ff',
+          100: '#ede9fe',
+          200: '#ddd6fe',
+          500: '#8b5cf6',
+          600: '#7c3aed',
+          700: '#6d28d9'
+        }
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif']
+      }
+    }
+  }
+}
+</script>
+<style data-purpose="custom-typography">
+body { background-color: #fafbfd; color: #0f172a; }
+</style>
+</head>
+<body class="min-h-screen flex flex-col font-sans antialiased text-slate-800 bg-[#fafbfd]">
+<header class="w-full bg-white border-b border-slate-200 sticky top-0 z-50">
+<div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+<a class="flex items-center gap-2.5 text-decoration-none group" href="exploreevnts.html">
+<div class="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center text-white shadow-sm transition-transform group-hover:scale-105">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span class="text-2xl font-bold tracking-tight text-slate-900">Campus<span class="text-brand-600">Connect</span></span>
+</a>
+<nav class="hidden md:flex items-center bg-slate-50 p-1 rounded-full border border-slate-200/80">
+<a class="px-5 py-2 text-sm font-semibold rounded-full bg-white text-slate-900 shadow-sm transition-colors" href="exploreevnts.html">Explore</a>
+<a class="px-5 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors" href="myregistrations.html">My Registration</a>
+</nav>
+<div class="flex items-center gap-2">
+<div data-auth-controls class="flex items-center gap-1"></div>
+</div>
+</div>
+</header>
+
+<main class="flex-1 max-w-7xl w-full mx-auto px-6 py-8 md:py-10">
+<div class="mb-8">
+<a class="inline-flex items-center gap-2 text-slate-600 hover:text-brand-600 font-medium text-sm transition-colors group" href="exploreevnts.html">
+<span class="transition-transform group-hover:-translate-x-1">&larr;</span>
+<span>Back to Explore Events</span>
+</a>
+</div>
+
+<div id="event-details-content" class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start" aria-live="polite">
+<section class="lg:col-span-12">
+<div class="bg-white border border-slate-200 rounded-2xl px-6 py-12 text-center shadow-sm">
+<div class="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-brand-100 border-t-brand-600"></div>
+<p class="text-sm font-medium text-slate-600">Loading event details...</p>
+</div>
+</section>
+</div>
+</main>
+
+<footer class="w-full bg-white border-t border-slate-200 mt-20">
+<div class="max-w-7xl mx-auto px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+<div class="flex items-center gap-2">
+<span class="font-bold text-slate-900">CampusConnect</span>
+<span>&bull;</span>
+<span>Your campus activity directory</span>
+</div>
+<div class="flex items-center gap-6">
+<a class="hover:text-slate-900 transition-colors" href="#">Campus Guidelines</a>
+<a class="hover:text-slate-900 transition-colors" href="#">Privacy Policy</a>
+<a class="hover:text-slate-900 transition-colors" href="#">Support &amp; Help</a>
+</div>
+<div>&copy; 2026 CampusConnect. All rights reserved.</div>
+</div>
+</footer>
+
+<script src="api-config.js"></script>
+<script type="module" src="auth.js"></script>
+<script>
+(() => {
+  const content = document.getElementById("event-details-content");
+  const params = new URLSearchParams(window.location.search);
+  const eventId = params.get("id");
+
+  function escapeHtml(value) {
+    return String(value)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function showState(title, message, isError = false) {
+    content.className = "grid grid-cols-1";
+    content.innerHTML = `
+      <section>
+        <div class="${isError ? "border-rose-200 bg-rose-50/40" : "border-brand-100 bg-white"} border rounded-2xl px-6 py-12 text-center shadow-sm">
+          <h1 class="text-2xl font-bold text-slate-900">${escapeHtml(title)}</h1>
+          <p class="mt-3 text-sm text-slate-600">${escapeHtml(message)}</p>
+          <a href="exploreevnts.html" class="mt-6 inline-flex px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold transition-colors">Back to Events</a>
+        </div>
+      </section>
+    `;
+  }
+
+  function formatStatus(status) {
+    const value = String(status || "").trim();
+    if (!value) return "Status unavailable";
+    return value.charAt(0).toUpperCase() + value.slice(1);
+  }
+
+  async function loadEvent() {
+    if (!eventId) {
+      showState("Invalid event link", "No event ID was provided in the URL.");
+      return;
+    }
+
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(eventId)) {
+      showState("Invalid event link", "The event ID in the URL is not a valid ID.");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${window.CampusConnectApiConfig.baseUrl}/events/${encodeURIComponent(eventId)}`,
+        { headers: { "Accept": "application/json" } }
+      );
+
+      if (response.status === 404) {
+        showState("Event not found", "This event may have been removed or the link is invalid.");
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+
+      const event = await response.json();
+      if (!event || typeof event !== "object") {
+        throw new Error("Unexpected API response format");
+      }
+
+      renderEvent(event);
+    } catch (error) {
+      showState(
+        "Unable to load event",
+        "The backend could not be reached. Confirm FastAPI is running and try again.",
+        true
+      );
+    }
+  }
+
+  function renderEvent(event) {
+    const title = escapeHtml(event.title || "Untitled event");
+    const status = String(event.status || "").toLowerCase();
+    const statusLabel = escapeHtml(formatStatus(status));
+    const capacity = Number.isFinite(Number(event.capacity)) ? Number(event.capacity) : null;
+    const seatsLeft = Number.isFinite(Number(event.seats_left)) ? Number(event.seats_left) : null;
+    const bookedSeats = Number.isFinite(Number(event.booked_seats)) ? Number(event.booked_seats) : null;
+    const isOpen = status === "open";
+    const isFull = seatsLeft !== null ? seatsLeft <= 0 : false;
+    const progress = capacity && capacity > 0
+      ? Math.max(0, Math.min(100, (((bookedSeats || 0) / capacity) * 100)))
+      : 0;
+
+    const statusClasses = isOpen
+      ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
+      : "bg-slate-100 text-slate-700 border-slate-200";
+
+    const registrationDisabled = !isOpen || isFull;
+    const registrationMessage = registrationDisabled
+      ? (isFull ? "This event is currently full." : "This event is currently closed.")
+      : "Registration will become available after authentication is connected.";
+
+    content.className = "grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start";
+    content.innerHTML = `
+      <section class="lg:col-span-7 flex flex-col" data-purpose="event-details-primary">
+        <div class="relative w-full rounded-2xl overflow-hidden shadow-sm border border-slate-200/80 bg-slate-900 aspect-video mb-6">
+          <div class="absolute inset-0 bg-gradient-to-br from-brand-700 via-slate-800 to-slate-950"></div>
+          <div class="absolute inset-0 flex items-center justify-center">
+            <span class="text-white/90 text-5xl font-bold">${escapeHtml((event.title || "C").charAt(0).toUpperCase())}</span>
+          </div>
+          <div class="absolute bottom-4 left-4">
+            <span class="px-3 py-1 text-xs font-semibold uppercase tracking-wider bg-white/95 backdrop-blur-sm text-brand-700 rounded-full shadow-sm">Campus Event</span>
+          </div>
+        </div>
+        <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 mb-4">${title}</h1>
+        <p class="text-slate-600 text-base sm:text-lg leading-relaxed mb-6">
+          Additional event description, date, and location are not available from the current API response.
+        </p>
+        <div class="flex flex-wrap items-center gap-4 text-sm text-slate-500 pt-4 border-t border-slate-200">
+          <span>Event ID: ${escapeHtml(event.id || eventId)}</span>
+        </div>
+      </section>
+
+      <section class="lg:col-span-5" data-purpose="registration-card-container">
+        <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 sm:p-8">
+          <div class="flex items-center justify-between mb-6">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Status</span>
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${statusClasses} border">
+              <span class="${isOpen ? "bg-emerald-500" : "bg-slate-500"} w-1.5 h-1.5 rounded-full ${isOpen ? "animate-pulse" : ""}"></span>
+              ${statusLabel}
+            </span>
+          </div>
+          <div class="mb-8">
+            <div class="flex items-baseline justify-between mb-2">
+              <span class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+                ${capacity !== null ? escapeHtml(String(capacity)) : "Unavailable"}
+              </span>
+              <span class="text-sm font-medium text-slate-500">total capacity</span>
+            </div>
+            ${capacity !== null ? `
+              <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                <div class="bg-brand-600 h-2.5 rounded-full transition-all duration-500" style="width: ${progress}%"></div>
+              </div>
+            ` : ""}
+            ${seatsLeft !== null ? `
+              <p class="mt-3 text-sm font-semibold ${isFull ? "text-rose-700" : "text-slate-700"}">
+                ${seatsLeft} seat${seatsLeft === 1 ? "" : "s"} left
+              </p>
+            ` : ""}
+          </div>
+          <button id="register-button" class="w-full py-3.5 px-6 rounded-xl ${registrationDisabled ? "bg-slate-200 text-slate-500 cursor-not-allowed" : "bg-brand-600 hover:bg-brand-700 text-white"} font-semibold text-base transition-all duration-200 text-center flex items-center justify-center" type="button" ${registrationDisabled ? "disabled" : "disabled"} aria-disabled="true">
+            ${isFull ? "Event Full" : "Register Now"}
+          </button>
+          <p class="text-center text-xs text-slate-500 mt-4">${escapeHtml(registrationMessage)}</p>
+          <p class="text-center text-xs text-slate-400 mt-2">Secure registration is not enabled yet.</p>
+        </div>
+      </section>
+    `;
+
+    document.title = `CampusConnect - ${event.title || "Event Details"}`;
+  }
+
+  loadEvent();
+})();
+</script>
+</body>
+</html>

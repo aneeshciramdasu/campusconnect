@@ -1,5 +1,13 @@
 .env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
 .venv/
-__pycashe__/
+.venv-1/
+__pycache__/
+*.pyc
 node_modules/
 dist/
