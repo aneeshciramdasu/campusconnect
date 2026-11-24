@@ -71,12 +71,27 @@ function friendlyAuthError(error) {
 
 async function signUp(email, password) {
   if (configurationError) throw new Error(configurationError);
-
-  const emailRedirectTo = new URL("exploreevnts.html", window.location.href).href;
+  const emailRedirectTo = getProductionRedirect("exploreevnts.html");
   const { data, error } = await supabase.auth.signUp({
     email: email.trim(),
     password,
     options: { emailRedirectTo }
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+async function signUpWithName(fullName, email, password) {
+  if (configurationError) throw new Error(configurationError);
+
+  const { data, error } = await supabase.auth.signUp({
+    email: email.trim(),
+    password,
+    options: {
+      emailRedirectTo: getProductionRedirect("exploreevnts.html"),
+      data: { full_name: fullName.trim() }
+    }
   });
 
   if (error) throw error;
@@ -118,6 +133,37 @@ async function getUser() {
 async function getAccessToken() {
   const session = await getSession();
   return session?.access_token || null;
+}
+
+function getProductionRedirect(page) {
+  if (
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1"
+  ) {
+    return new URL(page, window.location.href).href;
+  }
+
+  return `https://campusconnect-frontend-alpha-sand.vercel.app/${page}`;
+}
+
+async function sendPasswordReset(email) {
+  if (configurationError) throw new Error(configurationError);
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+    redirectTo: getProductionRedirect("reset-password.html")
+  });
+
+  if (error) throw error;
+}
+
+async function updatePassword(newPassword) {
+  if (configurationError) throw new Error(configurationError);
+
+  const { error } = await supabase.auth.updateUser({
+    password: newPassword
+  });
+
+  if (error) throw error;
 }
 
 function getInitials(user) {
@@ -180,19 +226,26 @@ function escapeHtml(value) {
 }
 
 function getUserLabel(user) {
-  const email = user?.email || "";
-  return email || "Student";
+  return (
+    user?.user_metadata?.full_name ||
+    user?.user_metadata?.name ||
+    user?.email ||
+    "Student"
+  );
 }
 
 window.CampusConnectAuth = {
   client: supabase,
   configurationError,
   signUp,
+  signUpWithName,
   signIn,
   signOut,
   getSession,
   getUser,
   getAccessToken,
+  sendPasswordReset,
+  updatePassword,
   friendlyAuthError,
   updateAuthControls
 };
