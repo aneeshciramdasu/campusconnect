@@ -59,6 +59,11 @@
 
       <form id="signup-form" novalidate>
         <div class="mb-5">
+          <label for="full-name" class="mb-2 block text-sm font-semibold text-slate-700">Full name</label>
+          <input id="full-name" name="full-name" type="text" autocomplete="name" required class="w-full rounded-xl border border-brand-100 px-4 py-3 text-slate-800 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20" placeholder="Your name"/>
+        </div>
+
+        <div class="mb-5">
           <label for="email" class="mb-2 block text-sm font-semibold text-slate-700">Email address</label>
           <input id="email" name="email" type="email" autocomplete="email" required class="w-full rounded-xl border border-brand-100 px-4 py-3 text-slate-800 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20" placeholder="student@campus.edu"/>
         </div>
@@ -122,8 +127,9 @@
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value;
       const confirmPassword = document.getElementById("confirm-password").value;
+      const fullName = document.getElementById("full-name").value.trim();
 
-      if (!email || !password || !confirmPassword) {
+      if (!fullName || !email || !password || !confirmPassword) {
         showAlert("Complete all fields before creating an account.");
         return;
       }
@@ -140,7 +146,7 @@
       submit.textContent = "Creating account...";
 
       try {
-        const data = await window.CampusConnectAuth.signUp(email, password);
+        const data = await window.CampusConnectAuth.signUpWithName(fullName, email, password);
         if (data.session) {
           showAlert("Account created successfully. Redirecting...", "success");
           window.location.href = "exploreevnts.html";

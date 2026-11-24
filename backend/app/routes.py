@@ -207,6 +207,56 @@ def register_for_event(
     }
 
 
+@router.delete(
+    "/registrations/{event_id}",
+    summary="Cancel my event registration",
+)
+def cancel_registration(
+    event_id: str,
+    authenticated_user=Depends(get_authenticated_user),
+):
+    registration_enabled = os.getenv("REGISTRATION_ENABLED", "false").strip().lower()
+    if registration_enabled not in {"1", "true", "yes"}:
+        raise HTTPException(
+            status_code=503,
+            detail="Registration is temporarily disabled",
+        )
+
+    try:
+        user_supabase = create_user_scoped_supabase_client(
+            authenticated_user.access_token
+        )
+    except RuntimeError:
+        raise HTTPException(
+            status_code=503,
+            detail="Registration service configuration is incomplete",
+        )
+
+    try:
+        response = user_supabase.rpc(
+            "cancel_event_registration",
+            {"p_event_id": event_id},
+        ).execute()
+    except Exception as error:
+        message = str(getattr(error, "message", error)).lower()
+        code = str(getattr(error, "code", "")).upper()
+
+        if code == "P0002" or "not found" in message:
+            raise HTTPException(
+                status_code=404,
+                detail="Registration not found",
+            )
+        if code == "42501" or "authorization" in message:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
+        raise HTTPException(
+            status_code=502,
+            detail="Registration cancellation service is unavailable",
+        )
+
+    return {"event_id": event_id, "status": "CANCELLED"}
+
+
 # ============================================================
 # FR-06: Get current student's registrations
 # ============================================================

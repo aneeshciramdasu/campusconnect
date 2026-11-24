@@ -238,7 +238,7 @@ body { background-color: #fafbfd; color: #0f172a; }
               </p>
             ` : ""}
           </div>
-          <button id="register-button" class="w-full py-3.5 px-6 rounded-xl ${registrationDisabled ? "bg-slate-200 text-slate-500 cursor-not-allowed" : "bg-brand-600 hover:bg-brand-700 text-white"} font-semibold text-base transition-all duration-200 text-center flex items-center justify-center" type="button" ${registrationDisabled ? "disabled" : "disabled"} aria-disabled="true">
+          <button id="register-button" class="w-full py-3.5 px-6 rounded-xl bg-slate-200 text-slate-500 cursor-not-allowed font-semibold text-base transition-all duration-200 text-center flex items-center justify-center" type="button" disabled aria-disabled="true">
             ${isFull ? "Event Full" : "Register Now"}
           </button>
           <p class="text-center text-xs text-slate-500 mt-4">${escapeHtml(registrationMessage)}</p>
