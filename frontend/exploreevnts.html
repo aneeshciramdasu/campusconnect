@@ -142,7 +142,7 @@
 <!-- END: Footer -->
 <script>
 (() => {
-  const API_URL = `${window.CampusConnectApiConfig.baseUrl}/events`;
+  const API_URL = `${window.CampusConnectApiConfig.baseUrl.replace(/\/+$/, "")}/events`;
   const grid = document.getElementById("event-cards-grid");
   const searchInput = document.getElementById("event-search");
   const searchButton = document.getElementById("event-search-button");
@@ -256,30 +256,41 @@
       ? `${API_URL}?search=${encodeURIComponent(query)}`
       : API_URL;
 
-    try {
-      const response = await fetch(url, {
-        method: "GET",
-        signal: searchRequest.signal,
-        headers: { "Accept": "application/json" }
-      });
+    const maxAttempts = 3;
 
-      if (!response.ok) {
-        const errorBody = await response.json().catch(() => null);
-        throw new Error(
-          errorBody?.detail ||
-          `CampusConnect API returned HTTP ${response.status}`
-        );
-      }
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        const response = await fetch(url, {
+          method: "GET",
+          signal: searchRequest.signal,
+          headers: { "Accept": "application/json" },
+          cache: "no-store"
+        });
 
-      const data = await response.json();
-      if (!Array.isArray(data)) {
-        throw new Error("Unexpected API response format");
-      }
+        if (!response.ok) {
+          const errorBody = await response.json().catch(() => null);
+          throw new Error(
+            errorBody?.detail ||
+            `CampusConnect API returned HTTP ${response.status}`
+          );
+        }
 
-      events = data;
-      renderEvents();
-    } catch (error) {
-      if (error.name !== "AbortError") {
+        const data = await response.json();
+        if (!Array.isArray(data)) {
+          throw new Error("Unexpected API response format");
+        }
+
+        events = data;
+        renderEvents();
+        return;
+      } catch (error) {
+        if (error.name === "AbortError") return;
+
+        if (attempt < maxAttempts) {
+          await new Promise((resolve) => setTimeout(resolve, attempt * 1500));
+          continue;
+        }
+
         showState(
           "Unable to load events",
           error.message === "Failed to fetch"

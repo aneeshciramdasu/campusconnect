@@ -140,13 +140,70 @@ class ProtectedEndpointAuthTests(unittest.TestCase):
 
 class PublicEndpointTests(unittest.TestCase):
     def test_event_list_remains_public(self):
-        response = client.get("/api/events")
+        class PublicQuery:
+            def select(self, *args, **kwargs):
+                return self
+
+            def eq(self, *args, **kwargs):
+                return self
+
+            def ilike(self, *args, **kwargs):
+                return self
+
+            def execute(self):
+                return SimpleNamespace(data=[
+                    {
+                        "id": TEST_EVENT_ID,
+                        "title": "AI Build Night",
+                        "capacity": 50,
+                        "status": "open",
+                        "organizer_id": "11111111-1111-1111-1111-111111111111",
+                    }
+                ])
+
+        class PublicTableClient:
+            def table(self, *args, **kwargs):
+                return PublicQuery()
+
+        with patch(
+            "app.routes.create_public_supabase_client",
+            return_value=PublicTableClient(),
+        ):
+            response = client.get("/api/events")
+
         self.assertEqual(response.status_code, 200)
         self.assertIsInstance(response.json(), list)
 
     def test_event_details_remain_public(self):
-        response = client.get(f"/api/events/{TEST_EVENT_ID}")
-        self.assertIn(response.status_code, (200, 404))
+        class PublicQuery:
+            def select(self, *args, **kwargs):
+                return self
+
+            def eq(self, *args, **kwargs):
+                return self
+
+            def execute(self):
+                return SimpleNamespace(data=[{
+                    "id": TEST_EVENT_ID,
+                    "title": "AI Build Night",
+                    "capacity": 50,
+                    "status": "open",
+                    "organizer_id": "11111111-1111-1111-1111-111111111111",
+                    "booked_seats": 0,
+                    "seats_left": 50,
+                }])
+
+        class PublicTableClient:
+            def table(self, *args, **kwargs):
+                return PublicQuery()
+
+        with patch(
+            "app.routes.create_public_supabase_client",
+            return_value=PublicTableClient(),
+        ):
+            response = client.get(f"/api/events/{TEST_EVENT_ID}")
+
+        self.assertEqual(response.status_code, 200)
 
 
 class CorsTests(unittest.TestCase):
