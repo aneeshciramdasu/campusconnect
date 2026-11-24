@@ -15,6 +15,24 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
+def create_public_supabase_client() -> Client:
+    """Create a public/anon client for public event reads."""
+    public_key = (
+        os.getenv("SUPABASE_PUBLIC_KEY", "").strip()
+        or os.getenv("SUPABASE_ANON_KEY", "").strip()
+    )
+    if not public_key:
+        raise RuntimeError(
+            "SUPABASE_PUBLIC_KEY or SUPABASE_ANON_KEY is not configured"
+        )
+    if public_key.lower().startswith("sb_secret") or "service_role" in public_key.lower():
+        raise RuntimeError(
+            "Public event reads require a publishable/anon Supabase key"
+        )
+
+    return create_client(SUPABASE_URL, public_key)
+
+
 def create_user_scoped_supabase_client(access_token: str) -> Client:
     """Create a per-request client whose PostgREST identity is the verified JWT."""
     key = os.getenv("SUPABASE_USER_KEY", SUPABASE_KEY).strip()

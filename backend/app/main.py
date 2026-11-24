@@ -19,6 +19,7 @@ def get_allowed_origins():
     return [
         "http://127.0.0.1:5500",
         "http://localhost:5500",
+        "https://campusconnect-frontend-alpha-sand.vercel.app",
     ]
 
 

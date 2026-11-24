@@ -264,7 +264,11 @@
       });
 
       if (!response.ok) {
-        throw new Error(`API request failed with status ${response.status}`);
+        const errorBody = await response.json().catch(() => null);
+        throw new Error(
+          errorBody?.detail ||
+          `CampusConnect API returned HTTP ${response.status}`
+        );
       }
 
       const data = await response.json();
@@ -276,7 +280,13 @@
       renderEvents();
     } catch (error) {
       if (error.name !== "AbortError") {
-        showState("Unable to load events", "Please confirm the FastAPI backend is running at 127.0.0.1:8000.", true);
+        showState(
+          "Unable to load events",
+          error.message === "Failed to fetch"
+            ? "The event service could not be reached. Check your connection and try again."
+            : String(error.message),
+          true
+        );
       }
     }
   }

@@ -1,11 +1,18 @@
 import os
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from app.auth import get_authenticated_user
-from app.supabase_client import create_user_scoped_supabase_client, supabase
+from app.supabase_client import (
+    create_public_supabase_client,
+    create_user_scoped_supabase_client,
+    supabase,
+)
+
+logger = logging.getLogger(__name__)
 
 
 router = APIRouter(
@@ -45,15 +52,29 @@ class RegistrationRequest(BaseModel):
 
 @router.get("/events", summary="Browse all campus events")
 def list_events(search: Optional[str] = None):
+    try:
+        public_supabase = create_public_supabase_client()
+        query = public_supabase.table("events").select(
+            "id, title, capacity, status, organizer_id"
+        ).eq("status", "open")
 
-    query = supabase.table("events").select(
-        "id, title, capacity, status, organizer_id"
-    )
+        if search:
+            query = query.ilike("title", f"%{search}%")
 
-    if search:
-        query = query.ilike("title", f"%{search}%")
-
-    return query.execute().data
+        response = query.execute()
+        return response.data
+    except RuntimeError as error:
+        logger.error("Public Supabase event client configuration error")
+        raise HTTPException(
+            status_code=503,
+            detail="Event service configuration is incomplete",
+        ) from error
+    except Exception as error:
+        logger.exception("Failed to fetch public events")
+        raise HTTPException(
+            status_code=502,
+            detail="Unable to load events",
+        ) from error
 
 
 # ============================================================
@@ -62,13 +83,26 @@ def list_events(search: Optional[str] = None):
 
 @router.get("/events/{event_id}", summary="Get single event details")
 def get_event_details(event_id: str):
-
-    event_res = (
-        supabase.table("events")
-        .select("*")
-        .eq("id", event_id)
-        .execute()
-    )
+    try:
+        public_supabase = create_public_supabase_client()
+        event_res = (
+            public_supabase.table("events")
+            .select("*")
+            .eq("id", event_id)
+            .eq("status", "open")
+            .execute()
+        )
+    except RuntimeError as error:
+        raise HTTPException(
+            status_code=503,
+            detail="Event service configuration is incomplete",
+        ) from error
+    except Exception as error:
+        logger.exception("Failed to fetch event details")
+        raise HTTPException(
+            status_code=502,
+            detail="Unable to load event details",
+        ) from error
 
     if not event_res.data:
         raise HTTPException(

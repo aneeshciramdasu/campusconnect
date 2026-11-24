@@ -144,7 +144,11 @@ body { background-color: #fafbfd; color: #0f172a; }
       }
 
       if (!response.ok) {
-        throw new Error(`API request failed with status ${response.status}`);
+        const errorBody = await response.json().catch(() => null);
+        throw new Error(
+          errorBody?.detail ||
+          `CampusConnect API returned HTTP ${response.status}`
+        );
       }
 
       const event = await response.json();
@@ -156,7 +160,9 @@ body { background-color: #fafbfd; color: #0f172a; }
     } catch (error) {
       showState(
         "Unable to load event",
-        "The backend could not be reached. Confirm FastAPI is running and try again.",
+        error.message === "Failed to fetch"
+          ? "The event service could not be reached. Check your connection and try again."
+          : String(error.message),
         true
       );
     }
